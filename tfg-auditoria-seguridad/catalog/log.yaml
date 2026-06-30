@@ -1,0 +1,55 @@
+# Catálogo de reglas — categoría LOG (Registro y auditoría)
+categoria: LOG
+descripcion: Servicios de registro y auditoría del sistema
+
+reglas:
+  - id: LOG-001
+    titulo: Subsistema de auditoría (auditd) inactivo
+    severidad: media
+    descripcion: >
+      auditd registra los eventos de seguridad del núcleo. Sin él se pierde la
+      trazabilidad de accesos y cambios. CIS recomienda mantenerlo activo.
+    check:
+      tipo: service
+      parametro: auditd
+      esperado: active
+    remediacion:
+      comando: 'apt-get install -y auditd && systemctl enable --now auditd'
+      reversible: true
+    rollback:
+      comando: 'systemctl disable --now auditd'
+
+  - id: LOG-002
+    titulo: Journal de systemd sin persistencia
+    severidad: baja
+    descripcion: >
+      Con Storage=volatile el journal se guarda en memoria y se pierde al
+      reiniciar. CIS recomienda almacenamiento persistente para conservar los
+      registros entre arranques.
+    check:
+      tipo: command
+      comando: 'grep -rh ''^Storage='' /etc/systemd/journald.conf /etc/systemd/journald.conf.d/ 2>/dev/null | tail -1 | cut -d= -f2'
+      operador: en_conjunto
+      esperado: ["persistent", "auto"]
+    remediacion:
+      comando: 'sed -i "s/Storage=volatile/Storage=persistent/" /etc/systemd/journald.conf.d/00-vulnerable.conf && systemctl restart systemd-journald'
+      reversible: true
+    rollback:
+      comando: 'sed -i "s/Storage=persistent/Storage=volatile/" /etc/systemd/journald.conf.d/00-vulnerable.conf && systemctl restart systemd-journald'
+
+  - id: LOG-003
+    titulo: Servicio rsyslog inactivo
+    severidad: media
+    descripcion: >
+      rsyslog centraliza el registro del sistema en /var/log. Detenerlo deja al
+      servidor sin sus registros tradicionales. CIS recomienda mantenerlo
+      activo.
+    check:
+      tipo: service
+      parametro: rsyslog
+      esperado: active
+    remediacion:
+      comando: 'systemctl enable --now rsyslog'
+      reversible: true
+    rollback:
+      comando: 'systemctl disable --now rsyslog'

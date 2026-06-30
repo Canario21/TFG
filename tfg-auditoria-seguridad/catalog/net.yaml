@@ -1,0 +1,157 @@
+# Catálogo de reglas — categoría NET (Configuración de red)
+# Siete parámetros del núcleo (sysctl) y dos del cortafuegos ufw.
+# La remediación de sysctl se aplica en caliente con `sysctl -w`; la
+# persistencia entre reinicios la garantiza la instantánea del laboratorio.
+categoria: NET
+descripcion: Parámetros de red del núcleo y configuración del cortafuegos
+
+reglas:
+  - id: NET-001
+    titulo: Reenvío de paquetes IPv4 habilitado
+    severidad: media
+    descripcion: >
+      Con net.ipv4.ip_forward activo el host encamina tráfico entre redes,
+      comportamiento propio de un router y no de un servidor. CIS recomienda
+      desactivarlo salvo que el equipo actúe como pasarela.
+    check:
+      tipo: sysctl
+      parametro: net.ipv4.ip_forward
+      esperado: "0"
+    remediacion:
+      comando: 'sysctl -w net.ipv4.ip_forward=0'
+      reversible: true
+    rollback:
+      comando: 'sysctl -w net.ipv4.ip_forward=1'
+
+  - id: NET-002
+    titulo: Aceptación de redirecciones ICMP habilitada
+    severidad: media
+    descripcion: >
+      Aceptar redirecciones ICMP permite a un atacante alterar la tabla de
+      rutas del host. CIS recomienda ignorarlas.
+    check:
+      tipo: sysctl
+      parametro: net.ipv4.conf.all.accept_redirects
+      esperado: "0"
+    remediacion:
+      comando: 'sysctl -w net.ipv4.conf.all.accept_redirects=0'
+      reversible: true
+    rollback:
+      comando: 'sysctl -w net.ipv4.conf.all.accept_redirects=1'
+
+  - id: NET-003
+    titulo: Envío de redirecciones ICMP habilitado
+    severidad: baja
+    descripcion: >
+      Enviar redirecciones ICMP solo tiene sentido en un router. En un
+      servidor revela información de encaminamiento innecesariamente.
+    check:
+      tipo: sysctl
+      parametro: net.ipv4.conf.all.send_redirects
+      esperado: "0"
+    remediacion:
+      comando: 'sysctl -w net.ipv4.conf.all.send_redirects=0'
+      reversible: true
+    rollback:
+      comando: 'sysctl -w net.ipv4.conf.all.send_redirects=1'
+
+  - id: NET-004
+    titulo: Protección SYN cookies desactivada
+    severidad: media
+    descripcion: >
+      Las SYN cookies mitigan los ataques de inundación SYN. CIS recomienda
+      mantenerlas activas (valor 1).
+    check:
+      tipo: sysctl
+      parametro: net.ipv4.tcp_syncookies
+      esperado: "1"
+    remediacion:
+      comando: 'sysctl -w net.ipv4.tcp_syncookies=1'
+      reversible: true
+    rollback:
+      comando: 'sysctl -w net.ipv4.tcp_syncookies=0'
+
+  - id: NET-005
+    titulo: Encaminamiento por origen aceptado
+    severidad: alta
+    descripcion: >
+      El source routing permite al emisor imponer la ruta de los paquetes y
+      eludir controles de red. CIS recomienda rechazarlo.
+    check:
+      tipo: sysctl
+      parametro: net.ipv4.conf.all.accept_source_route
+      esperado: "0"
+    remediacion:
+      comando: 'sysctl -w net.ipv4.conf.all.accept_source_route=0'
+      reversible: true
+    rollback:
+      comando: 'sysctl -w net.ipv4.conf.all.accept_source_route=1'
+
+  - id: NET-006
+    titulo: Registro de paquetes marcianos desactivado
+    severidad: baja
+    descripcion: >
+      Registrar los paquetes con direcciones de origen imposibles (martians)
+      ayuda a detectar suplantación. CIS recomienda activarlo.
+    check:
+      tipo: sysctl
+      parametro: net.ipv4.conf.all.log_martians
+      esperado: "1"
+    remediacion:
+      comando: 'sed -i "s/log_martians=0/log_martians=1/g" /etc/ufw/sysctl.conf 2>/dev/null; sysctl -w net.ipv4.conf.all.log_martians=1'
+      reversible: true
+    rollback:
+      comando: 'sed -i "s/log_martians=1/log_martians=0/g" /etc/ufw/sysctl.conf 2>/dev/null; sysctl -w net.ipv4.conf.all.log_martians=0'
+
+  - id: NET-007
+    titulo: Filtrado de ruta inversa (rp_filter) desactivado
+    severidad: media
+    descripcion: >
+      El rp_filter descarta paquetes cuya dirección de origen no sería
+      alcanzable por la interfaz de entrada, mitigando la suplantación. CIS
+      recomienda el modo estricto (valor 1).
+    check:
+      tipo: sysctl
+      parametro: net.ipv4.conf.all.rp_filter
+      esperado: "1"
+    remediacion:
+      comando: 'sysctl -w net.ipv4.conf.all.rp_filter=1'
+      reversible: true
+    rollback:
+      comando: 'sysctl -w net.ipv4.conf.all.rp_filter=0'
+
+  - id: NET-008
+    titulo: Cortafuegos ufw inactivo
+    severidad: alta
+    descripcion: >
+      Sin cortafuegos, todos los puertos en escucha quedan expuestos sin
+      filtrado. CIS recomienda mantener ufw activo con una política
+      restrictiva.
+    check:
+      tipo: command
+      comando: 'grep ''^ENABLED'' /etc/ufw/ufw.conf | cut -d= -f2'
+      operador: igual
+      esperado: 'yes'
+    remediacion:
+      comando: 'ufw allow 22/tcp && ufw --force enable'
+      reversible: true
+    rollback:
+      comando: 'ufw disable'
+
+  - id: NET-009
+    titulo: Política de entrada por defecto permisiva
+    severidad: media
+    descripcion: >
+      La política de entrada por defecto debe denegar el tráfico no
+      solicitado. Una política ACCEPT deja pasar todo lo no contemplado por
+      reglas explícitas.
+    check:
+      tipo: command
+      comando: 'grep ''^DEFAULT_INPUT_POLICY'' /etc/default/ufw | cut -d''"'' -f2'
+      operador: en_conjunto
+      esperado: ["DROP", "REJECT"]
+    remediacion:
+      comando: 'ufw default deny incoming'
+      reversible: true
+    rollback:
+      comando: 'ufw default allow incoming'

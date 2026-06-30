@@ -1,0 +1,91 @@
+# Catálogo de reglas — categoría SRV (Servicios y puertos activos)
+# Cada regla revierte una recomendación del CIS Ubuntu 24.04 LTS Benchmark.
+# El check de tipo 'port' incumple cuando el puerto indicado está en escucha.
+categoria: SRV
+descripcion: Servicios innecesarios que amplían la superficie de ataque
+
+reglas:
+  - id: SRV-001
+    titulo: Servicio Telnet en escucha (23/tcp)
+    severidad: critica
+    descripcion: >
+      Telnet transmite las credenciales y la sesión en texto claro, lo que
+      permite capturarlas mediante interceptación pasiva del tráfico. CIS
+      recomienda no tener el servidor Telnet instalado ni activo.
+    check:
+      tipo: port
+      protocolo: tcp
+      parametro: "23"
+    remediacion:
+      comando: 'sed -i "s/^telnet/#<off># telnet/" /etc/inetd.conf && systemctl restart inetutils-inetd'
+      reversible: true
+    rollback:
+      comando: 'sed -i "s/^#<off># telnet/telnet/" /etc/inetd.conf && systemctl restart inetutils-inetd'
+
+  - id: SRV-002
+    titulo: Servidor FTP en escucha (21/tcp)
+    severidad: alta
+    descripcion: >
+      El servicio FTP (vsftpd) transmite credenciales sin cifrar. Salvo
+      necesidad expresa, CIS recomienda deshabilitarlo en favor de
+      alternativas cifradas como SFTP.
+    check:
+      tipo: port
+      protocolo: tcp
+      parametro: "21"
+    remediacion:
+      comando: 'systemctl disable --now vsftpd'
+      reversible: true
+    rollback:
+      comando: 'systemctl enable --now vsftpd'
+
+  - id: SRV-003
+    titulo: Servicios rsh/rlogin en escucha (513-514/tcp)
+    severidad: critica
+    descripcion: >
+      Los servicios r* (rsh, rlogin, rexec) basan la autenticación en
+      relaciones de confianza por host y transmiten en texto claro. CIS
+      recomienda eliminarlos por completo.
+    check:
+      tipo: port
+      protocolo: tcp
+      parametro: "514"
+    remediacion:
+      comando: 'sed -i -E "s/^(shell|login|exec)/#<off># \1/" /etc/inetd.conf && systemctl restart inetutils-inetd'
+      reversible: true
+    rollback:
+      comando: 'sed -i -E "s/^#<off># (shell|login|exec)/\1/" /etc/inetd.conf && systemctl restart inetutils-inetd'
+
+  - id: SRV-004
+    titulo: Demonio Avahi (mDNS) en escucha (5353/udp)
+    severidad: media
+    descripcion: >
+      Avahi anuncia servicios por mDNS y revela información del host en la red
+      local. En un servidor sin necesidad de descubrimiento Zeroconf, CIS
+      recomienda deshabilitarlo.
+    check:
+      tipo: port
+      protocolo: udp
+      parametro: "5353"
+    remediacion:
+      comando: 'systemctl disable --now avahi-daemon avahi-daemon.socket'
+      reversible: true
+    rollback:
+      comando: 'systemctl enable --now avahi-daemon avahi-daemon.socket'
+
+  - id: SRV-005
+    titulo: Servicio de impresión CUPS en escucha (631/tcp)
+    severidad: media
+    descripcion: >
+      CUPS expone un servicio de impresión que en un servidor sin impresoras
+      constituye una superficie de ataque innecesaria. CIS recomienda
+      deshabilitarlo cuando no se requiere impresión.
+    check:
+      tipo: port
+      protocolo: tcp
+      parametro: "631"
+    remediacion:
+      comando: 'systemctl disable --now cups cups.socket'
+      reversible: true
+    rollback:
+      comando: 'systemctl enable --now cups cups.socket'

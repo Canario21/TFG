@@ -1,0 +1,55 @@
+# Catálogo de reglas — categoría UPD (Actualizaciones)
+categoria: UPD
+descripcion: Gestión de actualizaciones y autenticidad de paquetes
+
+reglas:
+  - id: UPD-001
+    titulo: Actualizaciones de seguridad pendientes
+    severidad: media
+    descripcion: >
+      Un sistema con actualizaciones pendientes mantiene vulnerabilidades
+      conocidas sin parchear. La remediación aplica las actualizaciones y, por
+      su naturaleza, no es reversible: una vez instaladas no se restauran las
+      versiones anteriores.
+    check:
+      tipo: command
+      comando: 'apt-get -s upgrade 2>/dev/null | grep -c ''^Inst'''
+      operador: igual
+      esperado: "0"
+    remediacion:
+      comando: 'apt-get update && apt-get upgrade -y'
+      reversible: false
+
+  - id: UPD-002
+    titulo: Actualizaciones automáticas deshabilitadas
+    severidad: baja
+    descripcion: >
+      Sin actualizaciones automáticas, los parches de seguridad dependen de la
+      intervención manual. CIS recomienda habilitar unattended-upgrades.
+    check:
+      tipo: command
+      comando: 'apt-config dump APT::Periodic::Unattended-Upgrade 2>/dev/null | cut -d''"'' -f2'
+      operador: igual
+      esperado: "1"
+    remediacion:
+      comando: 'sed -i "s/Unattended-Upgrade \"0\"/Unattended-Upgrade \"1\"/" /etc/apt/apt.conf.d/20auto-upgrades'
+      reversible: true
+    rollback:
+      comando: 'sed -i "s/Unattended-Upgrade \"1\"/Unattended-Upgrade \"0\"/" /etc/apt/apt.conf.d/20auto-upgrades'
+
+  - id: UPD-003
+    titulo: Instalación de paquetes sin autenticar permitida
+    severidad: alta
+    descripcion: >
+      Con APT::Get::AllowUnauthenticated en true, apt instala paquetes sin
+      verificar su firma, lo que abre la puerta a paquetes manipulados.
+    check:
+      tipo: command
+      comando: 'grep -rh AllowUnauthenticated /etc/apt/apt.conf.d/ 2>/dev/null'
+      operador: no_contiene
+      esperado: "true"
+    remediacion:
+      comando: 'rm -f /etc/apt/apt.conf.d/99-vulnerable'
+      reversible: true
+    rollback:
+      comando: 'echo ''APT::Get::AllowUnauthenticated "true";'' > /etc/apt/apt.conf.d/99-vulnerable'

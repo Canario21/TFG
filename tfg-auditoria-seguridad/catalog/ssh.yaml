@@ -1,0 +1,214 @@
+# Catálogo de reglas — categoría SSH (Acceso remoto)
+# Todos los checks leen la configuración EFECTIVA del servidor con `sshd -T`,
+# de modo que reflejan lo que sshd aplica realmente y no solo lo que aparece
+# en un fichero. La remediación escribe las directivas seguras en un drop-in
+# 00-hardening.conf, que sshd lee antes que 00-vulnerable.conf (primer valor
+# leído gana), y el rollback retira esa línea.
+categoria: SSH
+descripcion: Configuración insegura del servidor OpenSSH
+
+reglas:
+  - id: SSH-001
+    titulo: Acceso directo de root permitido
+    severidad: alta
+    descripcion: >
+      Permitir el login de root por SSH expone la cuenta más privilegiada a
+      ataques de fuerza bruta. CIS recomienda PermitRootLogin no.
+    check:
+      tipo: sshd
+      parametro: permitrootlogin
+      esperado: "no"
+      operador: igual
+    remediacion:
+      comando: 'echo "PermitRootLogin no" >> /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+      reversible: true
+    rollback:
+      comando: 'sed -i "/^PermitRootLogin/d" /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+
+  - id: SSH-002
+    titulo: Autenticación por contraseña habilitada
+    severidad: media
+    descripcion: >
+      La autenticación por contraseña es susceptible de fuerza bruta. CIS
+      recomienda la autenticación por clave pública (PasswordAuthentication no).
+    check:
+      tipo: sshd
+      parametro: passwordauthentication
+      esperado: "no"
+      operador: igual
+    remediacion:
+      comando: 'echo "PasswordAuthentication no" >> /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+      reversible: true
+    rollback:
+      comando: 'sed -i "/^PasswordAuthentication/d" /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+
+  - id: SSH-003
+    titulo: Contraseñas vacías permitidas
+    severidad: critica
+    descripcion: >
+      PermitEmptyPasswords yes admite el acceso de cuentas sin contraseña, un
+      fallo crítico de control de acceso. CIS exige PermitEmptyPasswords no.
+    check:
+      tipo: sshd
+      parametro: permitemptypasswords
+      esperado: "no"
+      operador: igual
+    remediacion:
+      comando: 'echo "PermitEmptyPasswords no" >> /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+      reversible: true
+    rollback:
+      comando: 'sed -i "/^PermitEmptyPasswords/d" /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+
+  - id: SSH-004
+    titulo: Reenvío X11 habilitado
+    severidad: baja
+    descripcion: >
+      El reenvío X11 amplía la superficie de ataque del cliente. En un
+      servidor sin entorno gráfico, CIS recomienda X11Forwarding no.
+    check:
+      tipo: sshd
+      parametro: x11forwarding
+      esperado: "no"
+      operador: igual
+    remediacion:
+      comando: 'echo "X11Forwarding no" >> /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+      reversible: true
+    rollback:
+      comando: 'sed -i "/^X11Forwarding/d" /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+
+  - id: SSH-005
+    titulo: Reenvío de puertos TCP permitido
+    severidad: baja
+    descripcion: >
+      AllowTcpForwarding permite tunelizar tráfico a través del servidor. Si
+      no se necesita, CIS recomienda desactivarlo.
+    check:
+      tipo: sshd
+      parametro: allowtcpforwarding
+      esperado: "no"
+      operador: igual
+    remediacion:
+      comando: 'echo "AllowTcpForwarding no" >> /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+      reversible: true
+    rollback:
+      comando: 'sed -i "/^AllowTcpForwarding/d" /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+
+  - id: SSH-006
+    titulo: Reenvío del agente permitido
+    severidad: baja
+    descripcion: >
+      AllowAgentForwarding expone las claves del agente del cliente a un
+      servidor comprometido. CIS recomienda desactivarlo si no se usa.
+    check:
+      tipo: sshd
+      parametro: allowagentforwarding
+      esperado: "no"
+      operador: igual
+    remediacion:
+      comando: 'echo "AllowAgentForwarding no" >> /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+      reversible: true
+    rollback:
+      comando: 'sed -i "/^AllowAgentForwarding/d" /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+
+  - id: SSH-007
+    titulo: Número de intentos de autenticación elevado
+    severidad: media
+    descripcion: >
+      Un MaxAuthTries alto facilita la fuerza bruta dentro de una misma
+      conexión. CIS recomienda un valor de 4 o inferior.
+    check:
+      tipo: sshd
+      parametro: maxauthtries
+      esperado: 4
+      operador: menor_igual
+    remediacion:
+      comando: 'echo "MaxAuthTries 4" >> /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+      reversible: true
+    rollback:
+      comando: 'sed -i "/^MaxAuthTries/d" /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+
+  - id: SSH-008
+    titulo: Tiempo de gracia de login elevado
+    severidad: media
+    descripcion: >
+      Un LoginGraceTime largo mantiene abiertas conexiones sin autenticar y
+      favorece ataques de agotamiento. CIS recomienda 60 segundos o menos.
+    check:
+      tipo: sshd
+      parametro: logingracetime
+      esperado: 60
+      operador: menor_igual
+    remediacion:
+      comando: 'echo "LoginGraceTime 60" >> /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+      reversible: true
+    rollback:
+      comando: 'sed -i "/^LoginGraceTime/d" /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+
+  - id: SSH-009
+    titulo: Banner de advertencia desactivado
+    severidad: baja
+    descripcion: >
+      Un banner legal previo al login disuade accesos no autorizados y deja
+      constancia. Con Banner none no se muestra ninguno.
+    check:
+      tipo: sshd
+      parametro: banner
+      esperado: "none"
+      operador: no_contiene
+    remediacion:
+      comando: 'echo "Banner /etc/issue.net" >> /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+      reversible: true
+    rollback:
+      comando: 'sed -i "/^Banner/d" /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+
+  - id: SSH-010
+    titulo: Nivel de registro insuficiente
+    severidad: baja
+    descripcion: >
+      Un LogLevel por debajo de INFO oculta los intentos de acceso. CIS
+      recomienda INFO o VERBOSE. Los valores QUIET y SILENT no registran los
+      inicios de sesión.
+    check:
+      tipo: sshd
+      parametro: loglevel
+      esperado: ["INFO", "VERBOSE"]
+      operador: en_conjunto
+    remediacion:
+      comando: 'echo "LogLevel INFO" >> /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+      reversible: true
+    rollback:
+      comando: 'sed -i "/^LogLevel/d" /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+
+  - id: SSH-011
+    titulo: Cifrados débiles (CBC) permitidos
+    severidad: media
+    descripcion: >
+      Los cifrados en modo CBC son vulnerables a ataques conocidos. CIS
+      recomienda restringirse a cifrados AEAD/CTR modernos.
+    check:
+      tipo: sshd
+      parametro: ciphers
+      esperado: "-cbc"
+      operador: no_contiene
+    remediacion:
+      comando: 'echo "Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes256-ctr" >> /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+      reversible: true
+    rollback:
+      comando: 'sed -i "/^Ciphers/d" /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+
+  - id: SSH-012
+    titulo: Algoritmos MAC débiles permitidos
+    severidad: media
+    descripcion: >
+      Los MAC basados en MD5 o SHA-1 son criptográficamente débiles. CIS
+      recomienda restringirse a la familia SHA-2.
+    check:
+      tipo: sshd
+      parametro: macs
+      esperado: "hmac-md5"
+      operador: no_contiene
+    remediacion:
+      comando: 'echo "MACs hmac-sha2-256,hmac-sha2-512" >> /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'
+      reversible: true
+    rollback:
+      comando: 'sed -i "/^MACs/d" /etc/ssh/sshd_config.d/00-hardening.conf && systemctl reload ssh'

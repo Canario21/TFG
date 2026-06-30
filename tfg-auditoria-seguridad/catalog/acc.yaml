@@ -1,0 +1,57 @@
+# Catálogo de reglas — categoría ACC (Cuentas y contraseñas)
+categoria: ACC
+descripcion: Política de cuentas y contraseñas de usuario
+
+reglas:
+  - id: ACC-001
+    titulo: Caducidad máxima de contraseña excesiva
+    severidad: media
+    descripcion: >
+      PASS_MAX_DAYS define la vida máxima de una contraseña. Un valor muy alto
+      perpetúa credenciales potencialmente comprometidas. CIS recomienda 365
+      días o menos.
+    check:
+      tipo: command
+      comando: 'grep ''^PASS_MAX_DAYS'' /etc/login.defs | awk ''{print $2}'''
+      operador: menor_igual
+      esperado: 365
+    remediacion:
+      comando: 'sed -i "s/^PASS_MAX_DAYS.*/PASS_MAX_DAYS\t365/" /etc/login.defs'
+      reversible: true
+    rollback:
+      comando: 'sed -i "s/^PASS_MAX_DAYS.*/PASS_MAX_DAYS\t99999/" /etc/login.defs'
+
+  - id: ACC-002
+    titulo: Longitud mínima de contraseña insuficiente
+    severidad: media
+    descripcion: >
+      La longitud mínima (minlen de pam_pwquality) determina la resistencia
+      frente a fuerza bruta. CIS recomienda al menos 14 caracteres.
+    check:
+      tipo: command
+      comando: 'grep pam_pwquality /etc/pam.d/common-password | grep -oE ''minlen=[0-9]+'' | cut -d= -f2'
+      operador: mayor_igual
+      esperado: 14
+    remediacion:
+      comando: 'sed -i "s/minlen=6/minlen=14/" /etc/pam.d/common-password'
+      reversible: true
+    rollback:
+      comando: 'sed -i "s/minlen=14/minlen=6/" /etc/pam.d/common-password'
+
+  - id: ACC-003
+    titulo: Sin bloqueo por intentos fallidos
+    severidad: media
+    descripcion: >
+      pam_faillock bloquea temporalmente una cuenta tras varios intentos
+      fallidos, mitigando la fuerza bruta. Su ausencia deja las cuentas sin
+      protección. CIS recomienda un umbral de 5 intentos o menos.
+    check:
+      tipo: command
+      comando: 'grep -c pam_faillock /etc/pam.d/common-auth'
+      operador: mayor_igual
+      esperado: 1
+    remediacion:
+      comando: 'sed -i "/pam_unix.so/i auth required pam_faillock.so preauth silent deny=5 unlock_time=900" /etc/pam.d/common-auth'
+      reversible: true
+    rollback:
+      comando: 'sed -i "/pam_faillock/d" /etc/pam.d/common-auth'

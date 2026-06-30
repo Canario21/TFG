@@ -1,0 +1,136 @@
+# Catálogo de reglas — categoría PERM (Permisos de ficheros)
+# El check file_mode incumple cuando el fichero concede algún bit de permiso
+# que el modo seguro de referencia no contempla (más permisivo de lo debido).
+categoria: PERM
+descripcion: Permisos de ficheros y directorios críticos del sistema
+
+reglas:
+  - id: PERM-001
+    titulo: /etc/passwd con permisos excesivos
+    severidad: critica
+    descripcion: >
+      Si /etc/passwd es escribible por otros usuarios, cualquiera puede alterar
+      cuentas del sistema. Debe ser 644, propiedad de root.
+    check:
+      tipo: file_mode
+      parametro: /etc/passwd
+      esperado: "644"
+    remediacion:
+      comando: 'chmod 644 /etc/passwd'
+      reversible: true
+    rollback:
+      comando: 'chmod 666 /etc/passwd'
+
+  - id: PERM-002
+    titulo: /etc/shadow legible por otros
+    severidad: critica
+    descripcion: >
+      /etc/shadow contiene los hashes de contraseña. Si es legible por otros,
+      quedan expuestos a ataques de diccionario. Debe ser 640 o más estricto.
+    check:
+      tipo: file_mode
+      parametro: /etc/shadow
+      esperado: "640"
+    remediacion:
+      comando: 'chmod 640 /etc/shadow'
+      reversible: true
+    rollback:
+      comando: 'chmod 644 /etc/shadow'
+
+  - id: PERM-003
+    titulo: /etc/gshadow legible por otros
+    severidad: alta
+    descripcion: >
+      /etc/gshadow contiene credenciales de grupo y debe restringirse a 640 o
+      más estricto.
+    check:
+      tipo: file_mode
+      parametro: /etc/gshadow
+      esperado: "640"
+    remediacion:
+      comando: 'chmod 640 /etc/gshadow'
+      reversible: true
+    rollback:
+      comando: 'chmod 644 /etc/gshadow'
+
+  - id: PERM-004
+    titulo: /etc/group con permisos excesivos
+    severidad: alta
+    descripcion: >
+      Si /etc/group es escribible por otros, se pueden manipular pertenencias a
+      grupos privilegiados. Debe ser 644.
+    check:
+      tipo: file_mode
+      parametro: /etc/group
+      esperado: "644"
+    remediacion:
+      comando: 'chmod 644 /etc/group'
+      reversible: true
+    rollback:
+      comando: 'chmod 666 /etc/group'
+
+  - id: PERM-005
+    titulo: /etc/ssh/sshd_config legible por otros
+    severidad: media
+    descripcion: >
+      El fichero de configuración del servidor SSH debe restringirse a 600
+      (solo root). En Ubuntu viene en 644 por defecto, lo que permite su lectura
+      por cualquier usuario. CIS recomienda 600 o más estricto.
+    check:
+      tipo: file_mode
+      parametro: /etc/ssh/sshd_config
+      esperado: "600"
+    remediacion:
+      comando: 'chmod 600 /etc/ssh/sshd_config'
+      reversible: true
+    rollback:
+      comando: 'chmod 644 /etc/ssh/sshd_config'
+
+  - id: PERM-006
+    titulo: /var/log con permisos excesivos
+    severidad: media
+    descripcion: >
+      Un /var/log escribible por todos permite manipular o borrar registros.
+      Debe ser 755 o más estricto.
+    check:
+      tipo: file_mode
+      parametro: /var/log
+      esperado: "755"
+    remediacion:
+      comando: 'chmod 755 /var/log'
+      reversible: true
+    rollback:
+      comando: 'chmod 777 /var/log'
+
+  - id: PERM-007
+    titulo: /etc/crontab legible por otros
+    severidad: media
+    descripcion: >
+      /etc/crontab debe restringirse a root (600) para no revelar tareas
+      programadas ni permitir su lectura por usuarios sin privilegios.
+    check:
+      tipo: file_mode
+      parametro: /etc/crontab
+      esperado: "600"
+    remediacion:
+      comando: 'chmod 600 /etc/crontab'
+      reversible: true
+    rollback:
+      comando: 'chmod 644 /etc/crontab'
+
+  - id: PERM-008
+    titulo: /etc/sudoers legible por otros
+    severidad: alta
+    descripcion: >
+      /etc/sudoers define la elevación de privilegios y debe ser 440. Si es
+      legible o escribible por otros, se expone o se puede manipular la política
+      de sudo.
+    check:
+      tipo: file_mode
+      parametro: /etc/sudoers
+      esperado: "440"
+    remediacion:
+      comando: 'chmod 440 /etc/sudoers'
+      reversible: true
+    rollback:
+      comando: 'chmod 644 /etc/sudoers'

@@ -1,0 +1,12 @@
+# Pesos no lineales por severidad.
+# La progresión 1, 3, 7, 15 es deliberadamente no lineal (analogía con la
+# escala de CVSS v3): una desviación crítica pesa mucho más que varias bajas.
+severidad:
+  baja: 1
+  media: 3
+  alta: 7
+  critica: 15
+
+# Peso uniforme por puerto en escucha accesible desde la red (término de
+# exposición de la métrica S). Los puertos enlazados solo a loopback no cuentan.
+puerto_expuesto: 2
